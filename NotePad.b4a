@@ -1,0 +1,279 @@
+﻿Build1=Default,kcsoft.notepad
+File1=btnLoad0.png
+File10=load.bal
+File11=main.bal
+File12=notepad_ar.txt
+File13=notepad_de.txt
+File14=notepad_en.txt
+File15=notepad_fr.txt
+File16=notepad_ja.txt
+File17=setup.bal
+File2=btnLoad1.png
+File3=btnNew0.png
+File4=btnNew1.png
+File5=btnSave0.png
+File6=btnSave1.png
+File7=btnSetup0.png
+File8=btnSetup1.png
+File9=languagenames.map
+FileGroup1=Default Group
+FileGroup10=Default Group
+FileGroup11=Default Group
+FileGroup12=Default Group
+FileGroup13=Default Group
+FileGroup14=Default Group
+FileGroup15=Default Group
+FileGroup16=Default Group
+FileGroup17=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+FileGroup7=Default Group
+FileGroup8=Default Group
+FileGroup9=Default Group
+Group=Default Group
+IconFile=
+Library1=ahlocale
+Library2=core
+Library3=dialogs
+Library4=ime
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: http://www.basic4ppc.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="8" android:targetSdkVersion="8"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~'End of default text.~\n~
+Module1=load
+Module2=setup
+Module3=General
+NumberOfFiles=17
+NumberOfLibraries=4
+NumberOfModules=3
+Version=9
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: NotePad
+	#VersionCode: 1
+	#VersionName: 
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: True
+#End Region
+
+Sub Process_Globals
+	Dim ProgName As String						: ProgName = "NotePad"
+	Dim ProgVersion As String					: ProgVersion = " V1"
+	Dim PadDir As String							: PadDir = File.DirRootExternal & "/NotePad"
+	Dim PadFileName As String
+	Dim TextMinSize As Float					: TextMinSize = 14
+	Dim TextSize As Float							: TextSize = 14
+	Dim LoadLastFile As Boolean				: LoadLastFile = False
+	Dim AskBeforeLeaving As Boolean		: AskBeforeLeaving = False
+	Dim LanguageID As String					: LanguageID = "en"
+	Dim LanguageI As String						: LanguageI = 0
+	Dim Texts(22) As String
+End Sub
+
+Sub Globals
+	Dim Locale As AHLocale
+	Dim edtPad As EditText
+	Dim btnNew, btnLoad, btnSave, btnSetup As Button
+	Dim pnlToolBox As Panel
+	Dim lblFileName As Label
+	Dim IME1 As IME
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Locale.Initialize
+
+	Activity.LoadLayout("main")
+	Activity.Title = ProgName & ProgVersion
+	
+	If FirstTime And File.Exists(PadDir, "*.*") = False Then
+		File.MakeDir(File.DirRootExternal, "NotePad")
+
+		Dim lstFiles As List
+		lstFiles = File.ListFiles(File.DirAssets)
+		
+		Dim i As Int
+		For i = 0 To lstFiles.Size - 1
+			Dim FileName As String
+			FileName = lstFiles.Get(i)
+			If FileName.Length = 14 Then
+				If FileName.ToLowerCase.SubString2(0, 7) = "notepad" Then
+					File.Copy(File.DirAssets, FileName, PadDir, FileName)
+				End If
+			End If
+		Next
+		
+		Dim layvals As LayoutValues
+		layvals = GetDeviceLayoutValues
+		If layvals.ApproximateScreenSize < 6 Then
+			TextMinSize = 14
+		Else
+			TextMinSize = 20
+		End If
+		TextSize = TextMinSize
+	End If
+	
+	If File.Exists(File.DirInternal, "NotePad.ini") Then
+		LoadInit
+	End If
+	
+	General.LoadTexts
+	
+	IME1.Initialize("IME1")
+	
+	If LoadLastFile = False Then
+		StartActivity(load)
+	End If
+End Sub
+
+Sub Activity_Resume
+	edtPad.TextSize = TextSize
+	If PadFileName <> "" And PadFileName <> ".txt" And File.Exists(PadDir, PadFileName) = True Then
+		edtPad.Text = File.ReadString(PadDir, PadFileName)
+		lblFileName.Text = PadFileName
+'	Else If PadFileName = "New file" Then
+	Else If PadFileName = Texts(0) Then
+		btnNew_Click
+	Else
+		PadFileName = ""
+		lblFileName.Text = PadFileName
+		edtPad.Text = ""
+	End If
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+	SaveInit
+End Sub
+
+Sub Activity_KeyPress (KeyCode As Int) As Boolean 'Return True to consume the event
+	Dim answ As Int
+	
+	Select KeyCode
+	Case KeyCodes.KEYCODE_BACK  
+		If AskBeforeLeaving = True Then
+'			answ = Msgbox2("Do you really want to quit the program", "ATTENTION", "Yes", "", "No", Null)
+			answ = Msgbox2(Texts(1), Texts(2), Texts(3), "", Texts(4), Null)
+			If answ = DialogResponse.NEGATIVE Then
+				Return True
+			End If
+		End If
+	End Select
+	Return False
+End Sub
+
+Sub btnLoad_Click
+	StartActivity("load")
+End Sub
+
+Sub btnSave_Click
+	Dim answ As Int
+	
+	If PadFileName = "" Then
+		SaveAs
+		Return
+	End If
+	
+	If File.Exists(PadDir, PadFileName) = True Then
+'		answ = Msgbox2(PadFileName & " already exists. Do you want to overwrite it ?", "ATTENTION", "Yes", "", "No", Null)
+		answ = Msgbox2(PadFileName & " " & Texts(5), Texts(2), Texts(3), "", Texts(4), Null)
+		If answ = DialogResponse.NEGATIVE Then
+			SaveAs
+		End If 
+	End If
+
+	Save
+End Sub
+
+Sub SaveAs
+	Dim dlgFile As FileDialog
+	Dim answ As Int
+	
+	Do While PadFileName = "" And PadFileName <> ".txt" Or File.Exists(PadDir, PadFileName)
+
+		dlgFile.FilePath = PadDir
+		dlgFile.FileFilter = ".txt"
+'		answ = dlgFile.Show("Select file", "Yes", "", "No", Null)
+		answ = dlgFile.Show(Texts(8), Texts(3), "", Texts(4), Null)
+		If answ = DialogResponse.NEGATIVE Then
+			Return
+		End If
+		PadFileName = dlgFile.ChosenName
+		If PadFileName.IndexOf(".") = -1 Then
+			PadFileName = PadFileName & ".txt"
+		End If
+	Loop
+	
+	Save
+End Sub
+
+Sub Save
+	File.WriteString(PadDir, PadFileName, edtPad.Text)
+'	ToastMessageShow("File " & PadFileName & " saved", False)
+	ToastMessageShow(Texts(6) & " " & PadFileName & " " & Texts(7), False)
+	lblFileName.Text = PadFileName
+End Sub
+
+Sub btnNew_Click
+	Dim answ As Int
+	
+'	answ = Msgbox2("Do you really want a new file ?", "New file", "Yes", "", "No", Null)
+	answ = Msgbox2(Texts(11), Texts(0), Texts(3), "", Texts(4), Null)
+	If answ = DialogResponse.POSITIVE Then
+		PadFileName = ""
+		lblFileName.Text = PadFileName
+		IME1.ShowKeyboard(edtPad)
+		edtPad.Text = ""
+	End If
+End Sub
+
+Sub btnSetup_Click
+	StartActivity("setup")
+End Sub
+
+Sub LoadInit
+	Dim tr As TextReader
+	Dim Version = "" As String
+	
+	tr.Initialize(File.OpenInput(File.DirInternal, "NotePad.ini"))
+	
+	Version = tr.ReadLine
+	If Version.StartsWith("V") Then
+		PadFileName = tr.ReadLine		
+	Else
+		PadFileName = Version
+	End If
+	TextSize = tr.ReadLine
+	LoadLastFile = tr.ReadLine
+	AskBeforeLeaving = tr.ReadLine
+	If Version = "" Then
+		LanguageID = Locale.Language
+	Else
+		LanguageI = tr.ReadLine
+		LanguageID = tr.ReadLine
+		If LanguageI = 0 Then
+			Locale.Initialize
+			LanguageID = Locale.Language
+		End If
+	End If
+End Sub
+
+Sub SaveInit
+	Dim tw As TextWriter
+	
+	tw.Initialize(File.OpenOutput(File.DirInternal, "NotePad.ini", False))
+	tw.WriteLine("V21")
+	tw.WriteLine(PadFileName)
+	tw.WriteLine(TextSize)
+	tw.WriteLine(LoadLastFile)
+	tw.WriteLine(AskBeforeLeaving)
+	tw.WriteLine(LanguageI)
+	tw.WriteLine(LanguageID)
+	tw.Close
+End Sub
+
+
